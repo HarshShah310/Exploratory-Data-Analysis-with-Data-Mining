@@ -1,0 +1,248 @@
+#Team:18 Urmi Manish Sheth – 1002064934, Harsh Navinbhai Shah – 1002057387, Sai Swetha Tadivaka – 1002112726
+
+
+
+
+
+
+```{r}
+#Task 2A:Display all the details about the dataset
+
+data_set <- read.csv("C:\\Users\\tsais\\OneDrive\\Desktop\\DM\\summer2023Assignment1\\summer2023Assignment1\\Batch1\\netflix_titles.csv")
+
+cat("Structure of the data frame:\n")
+print(data_set)
+
+cat("\nSummary of the data frame:\n")
+print(summary(data_set))
+
+```
+
+
+```{r}
+#Task 2B:Check for null values within each column. Fill in values for more than 100 missing columns with a specific label such as "No Director" or "Country Unavailable." Drop the rows for the remaining missing columns.
+
+new_data_set <- read.csv("C:\\Users\\tsais\\OneDrive\\Desktop\\DM\\summer2023Assignment1\\summer2023Assignment1\\Batch1\\netflix_titles.csv",na.strings = c("", "NA", "N/A"))
+
+print(colSums(is.na(new_data_set)))
+
+for (attribute in names(new_data_set)) {
+  count <- sum(is.na(new_data_set[[attribute]]) | new_data_set[[attribute]] == "")
+  if (count > 100) {
+    if (attribute == "director") {
+      replacedValue <- "No Director"
+    } else if (attribute == "country") {
+      replacedValue <- "Country Unavailable"
+    } else if (attribute == "cast") {
+      replacedValue <- "No Cast"
+    }
+    new_data_set[[attribute]][is.na(new_data_set[[attribute]]) | new_data_set[[attribute]] == ""] <- replacedValue
+  } else {
+    new_data_set <- new_data_set[complete.cases(new_data_set[[attribute]]), ]
+  }
+}
+print(colSums(is.na(new_data_set)))
+
+
+```
+
+```{r}
+
+# # Task 2C (5 points): Create a horizontal bar chart displaying the top 10 countries with 
+# # the highest number of movies and TV shows.
+
+library(ggplot2)
+movies_data <- subset(new_data_set, type == "Movie")
+tv_shows_data <- subset(new_data_set, type == "TV Show")
+top_movies_of_10_countries <- head(sort(table(movies_data$country), decreasing = TRUE), 10)
+movies_data <- data.frame(
+  Country = names(top_movies_of_10_countries),
+  Count = as.numeric(top_movies_of_10_countries)
+)
+movies_data$Country <- factor(movies_data$Country, levels = rev(movies_data$Country))
+movies_horizonal_plot <- ggplot(movies_data, aes(x = Count, y = reorder(Country, Count))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(x = "Count", y = "Country", title = "Top 10 Countries with the Highest Number of Movies") +
+  theme_minimal()
+top_tv_shows_countries <- head(sort(table(tv_shows_data$country), decreasing = TRUE), 10)
+tv_shows_data <- data.frame(
+  Country = names(top_tv_shows_countries),
+  Count = as.numeric(top_tv_shows_countries)
+)
+tv_shows_data$Country <- factor(tv_shows_data$Country, levels = rev(tv_shows_data$Country))
+tv_shows_horizontal_plot <- ggplot(tv_shows_data, aes(x = Count, y = reorder(Country, Count))) +
+  geom_bar(stat = "identity", fill = "red") +
+  labs(x = "Count", y = "Country", title = "Top 10 Countries with the Highest Number of TV Shows") +
+  theme_minimal()
+par(mfrow = c(1, 2))
+print(movies_horizonal_plot)
+print(tv_shows_horizontal_plot)
+```
+
+```{r}
+# Task 2D (4 points): Print the first row based on the longest duration time of a movie from each country. Include information such as the director, date added, release year, duration, and description of the movie.
+
+movies_data <- subset(new_data_set, type == "Movie")
+movies_data$duration_in_mins <- as.integer(sub(" min", "", movies_data$duration))
+idx <- unlist(by(movies_data, movies_data$country, function(requiredData) {
+  index <- which.max(requiredData$duration_in_mins)
+  rownames(requiredData)[index]
+}))
+longest_duration_movies_from_each_country <- movies_data[idx, c('country', 'director', 'date_added', 'release_year', 'duration', 'description')]
+print(longest_duration_movies_from_each_country)
+
+```
+
+
+```{r}
+# Task 2E (4 points): Display the title, director, date added, and release date of movies 
+# where the official release date and the date added to the platform have the same year.
+
+movies_data_set <- subset(new_data_set, type == "Movie")
+movies_data_set$date_added <- as.Date(movies_data_set$date_added, format = "%B %d, %Y")
+filtered_movies <- subset(movies_data_set, format(date_added, "%Y") == as.character(release_year))
+print(filtered_movies[, c('title', 'director', 'date_added', 'release_year')])
+
+
+```
+
+```{r}
+
+# Task 2F (4 points): Display the director, release year, and the number of movies and 
+# TV shows directed by each director within a year. Sort the results in descending order 
+# based on the count.
+
+movies_tvshows_data <- subset(new_data_set, type %in% c("Movie", "TV Show"))
+director_count <- aggregate(cbind(count = type) ~ director + release_year, data = movies_tvshows_data, FUN = length)
+director_count <- director_count[order(-director_count$count), ]
+desired_columns <- c("director", "release_year", "count")
+print(director_count[desired_columns])
+
+```
+
+```{r}
+
+# Task 2G (4 points): Display the director, release year, and the number of movies and 
+# TV shows directed by each director within a year. Sort the results in descending order 
+# based on the count.
+
+categorized_data <- subset(new_data_set, type %in% c("Movie", "TV Show") & listed_in %in% c("Documentaries", "Docuseries"))
+print(categorized_data[, c("title", "director", "date_added", "listed_in")])
+
+```
+
+```{r}
+
+# Task 2H (4 points): Display the title, date added, category, and description of Family 
+# Dramas. Use the description to identify the type of drama
+
+library(dplyr)
+
+family_drama_movies <- movies_tvshows_data[grep("Family Drama", movies_tvshows_data$description, ignore.case = TRUE), ]
+filtered_family_data <- c('title', 'date_added', 'listed_in', 'description')
+print(family_drama_movies[, filtered_family_data])
+
+```
+
+
+```{r}
+# Task 2I (5 points): Plot the distribution of TV shows based on the number of seasons 
+# using a horizontal bar chart. Group the seasons into the following categories:
+# Less than 3 seasons
+# 3 seasons
+# 4 seasons
+# 5 to less than 10 seasons
+# 10 or more seasons
+
+tv_shows <- subset(new_data_set, type == "TV Show")
+season_counts <- table(gsub("Seasons?", "", tv_shows$duration))
+categories <- c(
+  '<3 ' = sum(season_counts[as.numeric(names(season_counts)) < 3]),
+  '=3 ' = sum(season_counts[as.numeric(names(season_counts)) == 3]),
+  '=4 ' = sum(season_counts[as.numeric(names(season_counts)) == 4]),
+  '>=5&<10' = sum(season_counts[as.numeric(names(season_counts)) >= 5 & as.numeric(names(season_counts)) < 10]),
+  '>=10' = sum(season_counts[as.numeric(names(season_counts)) >= 10])
+)
+barplot(rev(categories), horiz = TRUE, xlab = 'Count', ylab = 'Number of Seasons',
+        main = 'Distribution of TV Shows by Number of Seasons', las = 1)
+
+
+```
+
+```{r}
+
+# Task 2J (6 points): Display a side-by-side pie chart showing the distribution of movie 
+# and TV show ratings.
+# Movie Ratings:
+# Uncut/Not rated
+# Restricted
+# Parental guidance
+# General audience
+# Adults only
+# TV Show Ratings:
+# All Children
+# Older Children
+# Parental Presence
+# General audience
+# Mature
+library(ggplot2)
+library(gridExtra)
+
+tv_shows <- subset(new_data_set, type == "TV Show")
+tv_shows_rating_count <- table(tv_shows$rating)
+movies <- subset(new_data_set, type == "Movie")
+movies_rating_count <- table(movies$rating)
+tv_shows_categories <- c(
+  'All Children' = tv_shows_rating_count['TV-Y'],
+  'Older Children' = tv_shows_rating_count['TV-Y7'] + tv_shows_rating_count['TV-Y7-FV'],
+  'Parental Presence' = tv_shows_rating_count['TV-PG'],
+  'General audience' = tv_shows_rating_count['TV-G'],
+  'Mature' = tv_shows_rating_count['TV-MA']
+)
+movies_categories <- c(
+  'Uncut/Not rated' = movies_rating_count['NR'],
+  'Restricted' = movies_rating_count['R'],
+  'Parental guidance' = movies_rating_count['PG'] + movies_rating_count['PG-13'],
+  'General audience' = movies_rating_count['G'],
+  'Adults only' = movies_rating_count['NC-17']
+)
+
+tv_shows_data <- data.frame(
+  Category = names(tv_shows_categories),
+  Count = as.numeric(tv_shows_categories)
+)
+movies_data <- data.frame(
+  Category = names(movies_categories),
+  Count = as.numeric(movies_categories)
+)
+
+tv_shows_data$Percentage <- tv_shows_data$Count / sum(tv_shows_data$Count) * 100
+movies_data$Percentage <- movies_data$Count / sum(movies_data$Count) * 100
+
+tv_shows_plot <- ggplot(tv_shows_data, aes(x = "", y = Count, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  labs(title = "Distribution of TV Shows by Rating") +
+  theme_void() +
+  geom_text(aes(label = paste0(sprintf("%.1f", Percentage), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 2) # Adjust the size here
+
+movies_horizontal_plot <- ggplot(movies_data, aes(x = "", y = Count, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  labs(title = "Distribution of Movies by Rating") +
+  theme_void() +
+  geom_text(aes(label = paste0(sprintf("%.1f", Percentage), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 2) # Adjust the size here
+
+grid.arrange(tv_shows_plot, movies_horizontal_plot, ncol = 2)
+
+
+```
+
+
+
+
+
